@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión Escolar - Estudiantes y Enfermería</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30">
+                    <i class="fa-solid fa-user-nurse text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white tracking-tight">EduHealth Portal</h1>
+                    <p class="text-xs text-slate-400">Control de Estudiantes & Registro de Enfermería</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3 w-full sm:w-auto">
+                <div class="bg-slate-700/50 px-3 py-1.5 rounded-lg border border-slate-600 text-xs text-slate-300 flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>5 Estudiantes Registrados</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        
+        <!-- Controls & Filters -->
+        <div class="bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-700 shadow-md space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- Search Box -->
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                    <input type="text" id="searchInput" oninput="filterStudents()" placeholder="Buscar por nombre o documento..." 
+                           class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+
+                <!-- Course Filter -->
+                <div>
+                    <select id="courseFilter" onchange="filterStudents()" 
+                            class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        <option value="">Todos los cursos</option>
+                        <option value="8-A">8-A</option>
+                        <option value="9-C">9-C</option>
+                        <option value="10-A">10-A</option>
+                        <option value="10-B">10-B</option>
+                        <option value="11-B">11-B</option>
+                    </select>
+                </div>
+
+                <!-- Allergy Filter -->
+                <div>
+                    <select id="allergyFilter" onchange="filterStudents()" 
+                            class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        <option value="">Todas las condiciones / alergias</option>
+                        <option value="con_alergias">Con Alergias Conocidas</option>
+                        <option value="sin_alergias">Sin Alergias</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Student Cards Grid -->
+        <div id="studentsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Dynamic items rendered by JS -->
+        </div>
+
+        <!-- Empty state fallback -->
+        <div id="noResults" class="hidden text-center py-12 bg-slate-800/40 rounded-2xl border border-dashed border-slate-700">
+            <i class="fa-solid fa-user-slash text-4xl text-slate-500 mb-3"></i>
+            <h3 class="text-lg font-semibold text-slate-300">No se encontraron estudiantes</h3>
+            <p class="text-sm text-slate-400 mt-1">Prueba cambiando los criterios de búsqueda o filtros.</p>
+        </div>
+    </main>
+
+    <!-- Modal Detail & History -->
+    <div id="studentModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between bg-slate-800/90">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-lg" id="modalInitials">
+                        --
+                    </div>
+                    <div>
+                        <h3 id="modalStudentName" class="text-base font-bold text-white">Nombre Estudiante</h3>
+                        <p id="modalStudentMeta" class="text-xs text-slate-400">Curso • Documento</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6 space-y-6 overflow-y-auto">
+                
+                <!-- Medical Overview & Emergency Contact -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Contact Box -->
+                    <div class="p-4 bg-slate-900/70 rounded-xl border border-slate-700/60">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center">
+                            <i class="fa-solid fa-phone text-blue-400 mr-2"></i> Contacto de Emergencia
+                        </h4>
+                        <p id="modalEmergencyName" class="text-sm font-semibold text-slate-200">--</p>
+                        <p id="modalEmergencyRelation" class="text-xs text-slate-400 mb-1">--</p>
+                        <p id="modalEmergencyPhone" class="text-xs font-mono text-emerald-400 font-semibold">--</p>
+                    </div>
+
+                    <!-- Medical Details Box -->
+                    <div class="p-4 bg-slate-900/70 rounded-xl border border-slate-700/60">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center">
+                            <i class="fa-solid fa-notes-medical text-rose-400 mr-2"></i> Perfil Médico
+                        </h4>
+                        <p class="text-xs text-slate-300"><strong>Tipo de Sangre:</strong> <span id="modalBloodType" class="text-rose-400 font-bold">--</span></p>
+                        <div class="mt-2">
+                            <span class="text-xs text-slate-400 block mb-1">Alergias:</span>
+                            <div id="modalAllergiesTags" class="flex flex-wrap gap-1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visit History -->
+                <div>
+                    <h4 class="text-sm font-bold text-white mb-3 flex items-center justify-between">
+                        <span><i class="fa-solid fa-clock-rotate-left text-blue-400 mr-2"></i> Historial de Visitas a Enfermería</span>
+                        <span id="modalVisitCount" class="text-xs bg-blue-500/20 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-500/30">0 registros</span>
+                    </h4>
+
+                    <div id="modalVisitsList" class="space-y-3">
+                        <!-- Dynamic visits rendered here -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3 bg-slate-900 border-t border-slate-700 text-right">
+                <button onclick="closeModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition">
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Mock Data de Estudiantes
+        const estudiantes = [
+            {
+                id: 1,
+                nombre: "Valeria Sofía Gómez Morales",
+                documento: "1098452310",
+                curso: "10-A",
+                edad: 15,
+                tipoSangre: "O+",
+                alergias: ["Penicilina", "Polen"],
+                condicionesMedicas: ["Asma leve"],
+                contactoEmergencia: {
+                    nombre: "Carmen Morales",
+                    relacion: "Madre",
+                    telefono: "+57 300 123 4567"
+                },
+                historialVisitas: [
+                    {
+                        id: "v101",
+                        fecha: "2026-03-10",
+                        hora: "10:15 AM",
+                        motivo: "Dificultad respiratoria moderada tras clase de educación física",
+                        diagnostico: "Crisis asmática leve",
+                        tratamiento: "Uso de inhalador Salbutamol (2 pufs). Descanso de 20 min.",
+                        atendidoPor: "Dra. Elena Rostrova"
+                    },
+                    {
+                        id: "v102",
+                        fecha: "2026-02-14",
+                        hora: "08:30 AM",
+                        motivo: "Cefalea e indisposición",
+                        diagnostico: "Cefalea por deshidratación",
+                        tratamiento: "Suministro de hidratación oral y reposo",
+                        atendidoPor: "Enf. Mario Benítez"
+                    }
+                ]
+            },
+            {
+                id: 2,
+                nombre: "Mateo Alejandro Silva Ruiz",
+                documento: "1095123987",
+                curso: "11-B",
+                edad: 16,
+                tipoSangre: "A+",
+                alergias: ["Maní", "Mariscos"],
+                condicionesMedicas: [],
+                contactoEmergencia: {
+                    nombre: "Roberto Silva",
+                    relacion: "Padre",
+                    telefono: "+57 315 987 6543"
+                },
+                historialVisitas: [
+                    {
+                        id: "v103",
+                        fecha: "2026-03-22",
+                        hora: "11:45 AM",
+                        motivo: "Trauma leve en muñeca derecha durante baloncesto",
+                        diagnostico: "Esguince de muñeca Grado 1",
+                        tratamiento: "Inmovilización con vendaje, aplicación de hielo por 15 min.",
+                        atendidoPor: "Dra. Elena Rostrova"
+                    }
+                ]
+            },
+            {
+                id: 3,
+                nombre: "Camila Andrea Torres Vargas",
+                documento: "1097654321",
+                curso: "9-C",
+                edad: 14,
+                tipoSangre: "B+",
+                alergias: [],
+                condicionesMedicas: ["Migraña crónica"],
+                contactoEmergencia: {
+                    nombre: "Laura Vargas",
+                    relacion: "Madre",
+                    telefono: "+57 312 456 7890"
+                },
+                historialVisitas: [
+                    {
+                        id: "v104",
+                        fecha: "2026-01-28",
+                        hora: "02:00 PM",
+                        motivo: "Dolor de cabeza intenso y sensibilidad a la luz",
+                        diagnostico: "Episodio de migraña",
+                        tratamiento: "Reposo en ambiente oscuro, compresa fría en la frente",
+                        atendidoPor: "Enf. Mario Benítez"
+                    }
+                ]
+            },
+            {
+                id: 4,
+                nombre: "Lucas Daniel Martínez Castro",
+                documento: "1102345678",
+                curso: "8-A",
+                edad: 13,
+                tipoSangre: "O-",
+                alergias: ["Ibuprofeno", "Picaduras de abeja"],
+                condicionesMedicas: ["Hipoglucemia"],
+                contactoEmergencia: {
+                    nombre: "Patricia Castro",
+                    relacion: "Tía / Acudiente",
+                    telefono: "+57 318 654 3210"
+                },
+                historialVisitas: [
+                    {
+                        id: "v105",
+                        fecha: "2026-03-01",
+                        hora: "09:10 AM",
+                        motivo: "Mareo y sudoración fría a primera hora",
+                        diagnostico: "Baja de azúcar por ayuno prolongado",
+                        tratamiento: "Suministro de jugo glucosado y snack.",
+                        atendidoPor: "Dra. Elena Rostrova"
+                    }
+                ]
+            },
+            {
+                id: 5,
+                nombre: "Sofia Mariana Hernández Reyes",
+                documento: "1094876543",
+                curso: "10-B",
+                edad: 15,
+                tipoSangre: "AB+",
+                alergias: ["Látex"],
+                condicionesMedicas: [],
+                contactoEmergencia: {
+                    nombre: "Fernando Hernández",
+                    relacion: "Padre",
+                    telefono: "+57 301 789 0123"
+                },
+                historialVisitas: []
+            }
+        ];
+
+        // Render Card List
+        function renderStudents(data) {
+            const container = document.getElementById('studentsGrid');
+            const noResults = document.getElementById('noResults');
+
+            container.innerHTML = '';
+
+            if (data.length === 0) {
+                noResults.classList.remove('hidden');
+                return;
+            } else {
+                noResults.classList.add('hidden');
+            }
+
+            data.forEach(estudiante => {
+                const tieneAlergias = estudiante.alergias.length > 0;
+                
+                const card = document.createElement('div');
+                card.className = "bg-slate-800 rounded-2xl border border-slate-700 p-5 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-slate-600 transition-all";
+                
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <span class="px-2.5 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-semibold">
+                                    Curso ${estudiante.curso}
+                                </span>
+                                <h3 class="text-base font-bold text-white mt-2 leading-snug">${estudiante.nombre}</h3>
+                                <p class="text-xs text-slate-400">Doc: ${estudiante.documento} • ${estudiante.edad} años</p>
+                            </div>
+                            <span class="px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold rounded text-xs">
+                                ${estudiante.tipoSangre}
+                            </span>
+                        </div>
+
+                        <!-- Allergies Badges -->
+                        <div class="my-4 space-y-1.5">
+                            <span class="text-xs text-slate-400 font-medium">Alergias:</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${tieneAlergias 
+                                    ? estudiante.alergias.map(a => `<span class="px-2 py-0.5 bg-rose-500/10 text-rose-300 text-xs rounded-md border border-rose-500/20"><i class="fa-solid fa-triangle-exclamation text-[10px] mr-1"></i>${a}</span>`).join('')
+                                    : `<span class="text-xs text-slate-500 italic">Sin alergias registradas</span>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-700/60 flex items-center justify-between mt-2">
+                        <span class="text-xs text-slate-400">
+                            <i class="fa-solid fa-notes-medical text-blue-400 mr-1"></i> ${estudiante.historialVisitas.length} visita(s)
+                        </span>
+                        <button onclick="openModal(${estudiante.id})" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow-md shadow-blue-600/20 transition flex items-center space-x-1.5">
+                            <span>Ver Ficha</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Filtering Logic
+        function filterStudents() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const courseValue = document.getElementById('courseFilter').value;
+            const allergyValue = document.getElementById('allergyFilter').value;
+
+            const filtered = estudiantes.filter(e => {
+                const matchesSearch = e.nombre.toLowerCase().includes(searchValue) || e.documento.includes(searchValue);
+                const matchesCourse = courseValue === "" || e.curso === courseValue;
+                
+                let matchesAllergy = true;
+                if (allergyValue === "con_alergias") matchesAllergy = e.alergias.length > 0;
+                if (allergyValue === "sin_alergias") matchesAllergy = e.alergias.length === 0;
+
+                return matchesSearch && matchesCourse && matchesAllergy;
+            });
+
+            renderStudents(filtered);
+        }
+
+        // Modal Handlers
+        function openModal(id) {
+            const est = estudiantes.find(e => e.id === id);
+            if (!est) return;
+
+            // Initials
+            const initials = est.nombre.split(' ').map(n => n[0]).slice(0, 2).join('');
+            document.getElementById('modalInitials').textContent = initials;
+            document.getElementById('modalStudentName').textContent = est.nombre;
+            document.getElementById('modalStudentMeta').textContent = `Curso ${est.curso} • ${est.edad} años • Doc: ${est.documento}`;
+
+            // Emergency
+            document.getElementById('modalEmergencyName').textContent = est.contactoEmergencia.nombre;
+            document.getElementById('modalEmergencyRelation').textContent = `Parentesco: ${est.contactoEmergencia.relacion}`;
+            document.getElementById('modalEmergencyPhone').textContent = est.contactoEmergencia.telefono;
+
+            // Medical
+            document.getElementById('modalBloodType').textContent = est.tipoSangre;
+            const allergiesContainer = document.getElementById('modalAllergiesTags');
+            if (est.alergias.length > 0) {
+                allergiesContainer.innerHTML = est.alergias.map(a => `<span class="px-2 py-0.5 bg-rose-500/20 text-rose-300 text-xs rounded border border-rose-500/30">${a}</span>`).join('');
+            } else {
+                allergiesContainer.innerHTML = `<span class="text-xs text-slate-500 italic">Ninguna</span>`;
+            }
+
+            // Visits History
+            document.getElementById('modalVisitCount').textContent = `${est.historialVisitas.length} registros`;
+            const visitsList = document.getElementById('modalVisitsList');
+            visitsList.innerHTML = '';
+
+            if (est.historialVisitas.length === 0) {
+                visitsList.innerHTML = `
+                    <div class="text-center py-6 text-slate-500 text-xs bg-slate-900/40 rounded-xl border border-slate-700/50">
+                        Este estudiante no registra atenciones en la enfermería.
+                    </div>
+                `;
+            } else {
+                est.historialVisitas.forEach(v => {
+                    const item = document.createElement('div');
+                    item.className = "p-3.5 bg-slate-900/80 rounded-xl border border-slate-700/80 space-y-1.5 text-xs";
+                    item.innerHTML = `
+                        <div class="flex items-center justify-between text-slate-400 border-b border-slate-800 pb-1.5">
+                            <span class="font-semibold text-blue-400"><i class="fa-regular fa-calendar mr-1"></i>${v.fecha} - ${v.hora}</span>
+                            <span class="italic text-slate-400">${v.atendidoPor}</span>
+                        </div>
+                        <p class="text-slate-200"><strong>Motivo:</strong> ${v.motivo}</p>
+                        <p class="text-slate-300"><strong>Diagnóstico:</strong> ${v.diagnostico}</p>
+                        <p class="text-emerald-400"><strong>Tratamiento:</strong> ${v.tratamiento}</p>
+                    `;
+                    visitsList.appendChild(item);
+                });
+            }
+
+            document.getElementById('studentModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('studentModal').classList.add('hidden');
+        }
+
+        // Close modal on click outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('studentModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+
+        // Initial Load
+        renderStudents(estudiantes);
+    </script>
+</body>
+</html>
